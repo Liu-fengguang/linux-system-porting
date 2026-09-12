@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>U-Boot 命令台</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #f5f8f8;
+    --paper-raised: #ffffff;
+    --ink: #17272c;
+    --ink-soft: #4c6067;
+    --line: #d7e2e4;
+    --line-strong: #b6c8cb;
+    --accent: #0f766e;
+    --accent-soft: #e0f2f0;
+    --code-bg: #0e1a1d;
+    --code-ink: #e2eef0;
+    --code-cmt: #7fa39d;
+    --warn: #b45309;
+    --warn-bg: #f7ecdd;
+    --highlight: #eef7f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0f1416;
+      --paper-raised: #161d20;
+      --ink: #e0eaec;
+      --ink-soft: #96a8ad;
+      --line: #27343a;
+      --line-strong: #3c4d54;
+      --accent: #2dd4bf;
+      --accent-soft: #0f2d2a;
+      --code-bg: #0a1012;
+      --code-ink: #dce9eb;
+      --code-cmt: #6f948e;
+      --warn: #e0a45c;
+      --warn-bg: #2e2410;
+      --highlight: #14262a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0f1416;
+    --paper-raised: #161d20;
+    --ink: #e0eaec;
+    --ink-soft: #96a8ad;
+    --line: #27343a;
+    --line-strong: #3c4d54;
+    --accent: #2dd4bf;
+    --accent-soft: #0f2d2a;
+    --code-bg: #0a1012;
+    --code-ink: #dce9eb;
+    --code-cmt: #6f948e;
+    --warn: #e0a45c;
+    --warn-bg: #2e2410;
+    --highlight: #14262a;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    line-height: 1.65;
+    font-size: 15.5px;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 20px 90px; }
+
+  /* header */
+  header { padding: 44px 0 10px; }
+  .eyebrow {
+    font-family: "Chakra Petch", monospace;
+    font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: 10px;
+  }
+  h1 {
+    font-family: "Chakra Petch", "PingFang SC", sans-serif;
+    font-size: 36px; margin: 0 0 10px; font-weight: 700; line-height: 1.15;
+    text-wrap: balance;
+  }
+  .sub { color: var(--ink-soft); margin: 0 0 6px; max-width: 66ch; }
+  .tip {
+    display: inline-block; margin-top: 6px; font-size: 13.5px;
+    background: var(--accent-soft); color: var(--accent);
+    border-radius: 8px; padding: 6px 12px; font-weight: 600;
+  }
+
+  /* sticky toolbar */
+  .toolbar {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--paper);
+    padding: 12px 0 10px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 26px;
+  }
+  .search-row { display: flex; gap: 10px; align-items: center; }
+  .search-box {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    background: var(--paper-raised);
+    border: 1.5px solid var(--line-strong);
+    border-radius: 10px; padding: 8px 12px;
+  }
+  .search-box:focus-within { border-color: var(--accent); }
+  .search-box svg { flex: none; opacity: .55; }
+  input[type="search"] {
+    border: none; outline: none; background: transparent;
+    font: inherit; color: var(--ink); width: 100%;
+  }
+  input[type="search"]::placeholder { color: var(--ink-soft); }
+  kbd {
+    font-family: "JetBrains Mono", monospace; font-size: 11px;
+    border: 1px solid var(--line-strong); border-bottom-width: 2px;
+    border-radius: 5px; padding: 1px 6px; color: var(--ink-soft);
+    background: var(--paper);
+  }
+  .count {
+    font-size: 13px; color: var(--ink-soft); white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+  .chip {
+    font: inherit; font-size: 13px;
+    border: 1px solid var(--line-strong);
+    background: var(--paper-raised); color: var(--ink-soft);
+    border-radius: 999px; padding: 4px 13px; cursor: pointer;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  :root[data-theme="dark"] .chip.on { color: #08201d; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chip.on { color: #08201d; } }
+
+  /* sections */
+  section { margin-bottom: 34px; }
+  section h2 {
+    font-size: 17px; margin: 0 0 12px; font-weight: 700;
+    display: flex; align-items: center; gap: 10px;
+  }
+  section h2::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+  .sec-note {
+    font-size: 13.5px; color: var(--ink-soft);
+    background: var(--highlight); border-left: 3px solid var(--accent);
+    padding: 8px 12px; border-radius: 0 8px 8px 0; margin-bottom: 12px;
+    max-width: 80ch;
+  }
+
+  /* command grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .cmd {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 6px;
+    position: relative;
+  }
+  .cmd:hover { border-color: var(--line-strong); }
+  .cmd-top { display: flex; align-items: center; gap: 8px; }
+  .cmd-name {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 15px; font-weight: 600; color: var(--accent);
+    background: none; border: none; padding: 0;
+  }
+  .star {
+    font-size: 10.5px; font-weight: 700; color: var(--warn);
+    background: var(--warn-bg); border-radius: 4px; padding: 1px 6px;
+    letter-spacing: .05em; flex: none;
+  }
+  .cmd-desc { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+  .ex {
+    font-family: "JetBrains Mono", monospace; font-size: 12.5px;
+    background: var(--code-bg); color: var(--code-ink);
+    border-radius: 7px; padding: 7px 30px 7px 10px;
+    overflow-x: auto; white-space: pre; position: relative;
+  }
+  .ex .pr { color: var(--code-cmt); }
+  .copy {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    font: inherit; font-size: 11px;
+    background: rgba(255,255,255,.12); color: var(--code-ink);
+    border: none; border-radius: 5px; padding: 3px 7px; cursor: pointer;
+    opacity: 0; transition: opacity .15s;
+  }
+  .cmd:hover .copy, .cmd:focus-within .copy, .snippet:hover .copy { opacity: 1; }
+  .copy:hover { background: rgba(255,255,255,.28); }
+  @media (hover: none) { .copy { opacity: .85; } }
+
+  /* snippets */
+  .snippet {
+    background: var(--paper-raised); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
+  }
+  .snippet h3 { margin: 0 0 8px; font-size: 14px; }
+  .snippet pre {
+    margin: 0; background: var(--code-bg); color: var(--code-ink);
+    border-radius: 8px; padding: 12px 40px 12px 12px;
+    font-family: "JetBrains Mono", monospace; font-size: 12.5px;
+    line-height: 1.7; overflow-x: auto; position: relative;
+  }
+  .snippet pre .c { color: var(--code-cmt); }
+
+  /* empty state */
+  .empty {
+    display: none; text-align: center; padding: 60px 0; color: var(--ink-soft);
+  }
+  .empty b { color: var(--accent); font-family: "JetBrains Mono", monospace; }
+
+  footer {
+    margin-top: 50px; padding-top: 16px; border-top: 1px solid var(--line);
+    color: var(--ink-soft); font-size: 13px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  button.theme-toggle {
+    font: inherit; font-size: 13px; background: var(--paper-raised);
+    border: 1px solid var(--line-strong); color: var(--ink-soft);
+    border-radius: 6px; padding: 4px 12px; cursor: pointer;
+  }
+  button.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  button:focus-visible, input:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  @media print {
+    body { background: #fff; }
+    .toolbar, .copy, .theme-toggle { display: none; }
+    .grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">i.MX6ULL · 系统移植篇 · 第3讲</div>
+    <h1>U-Boot 命令台</h1>
+    <p class="sub">按关键字搜索或点分类筛选，快速定位命令；每条命令的示例都能一键复制。</p>
+    <span class="tip">开机后在 bootdelay 倒计时结束前按回车，进入命令行</span>
+  </header>
+
+  <div class="toolbar">
+    <div class="search-row">
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="search" id="q" placeholder="搜索命令，如 mmc / 网络 / 启动 / nand …" autocomplete="off">
+        <kbd>/</kbd>
+      </div>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div id="sections"></div>
+  <div class="empty" id="empty">没有找到命令 —— 试试 <b>mmc</b> <b>网络</b> <b>启动</b> 这样的关键字</div>
+
+  <footer>
+    <span>配合正点原子第3讲《Uboot命令使用》整理 · 完整版见 Markdown 笔记</span>
+    <button class="theme-toggle" id="themeToggle" type="button">切换深色 / 浅色</button>
+  </footer>
+</div>
+
+<script>
+(function () {
+  /* ---------- 数据 ---------- */
+  var CATS = [
+    { id: "info",  name: "信息查询" },
+    { id: "env",   name: "环境变量" },
+    { id: "mem",   name: "内存操作" },
+    { id: "net",   name: "网络操作" },
+    { id: "mmc",   name: "EMMC / SD" },
+    { id: "fs",    name: "文件系统" },
+    { id: "nand",  name: "NAND" },
+    { id: "boot",  name: "BOOT 启动" },
+    { id: "misc",  name: "其他" }
+  ];
+
+  var ITEMS = [
+    /* 信息查询 */
+    { cat: "info", cmd: "help / ?", desc: "查看命令帮助", ex: "help mmc" },
+    { cat: "info", cmd: "bdinfo", desc: "查看板子信息（DRAM 起始地址 0x80000000、大小等）", ex: "bdinfo" },
+    { cat: "info", cmd: "printenv", desc: "查看当前所有环境变量", ex: "printenv", hot: true },
+    { cat: "info", cmd: "version", desc: "查看 U-Boot 版本与编译器信息", ex: "version" },
+
+    /* 环境变量 */
+    { cat: "env", cmd: "setenv", desc: "设置 / 新建 / 删除环境变量（不带值即为删除）", ex: "setenv bootdelay 5\nsetenv myvar 123\nsetenv myvar", hot: true },
+    { cat: "env", cmd: "saveenv", desc: "保存环境变量到 EMMC/NAND，掉电不丢", ex: "saveenv", hot: true },
+
+    /* 内存操作 */
+    { cat: "mem", cmd: "md", desc: "显示内存值（display）", ex: "md.b 80000000 10" },
+    { cat: "mem", cmd: "nm", desc: "修改内存（地址不自增）", ex: "nm.l 80000000" },
+    { cat: "mem", cmd: "mm", desc: "修改内存（地址自增，连续改）", ex: "mm.l 80000000" },
+    { cat: "mem", cmd: "mw", desc: "用指定值填充内存", ex: "mw.b 80000000 FF 10" },
+    { cat: "mem", cmd: "cp", desc: "拷贝内存", ex: "cp.b 80000000 80010000 100" },
+    { cat: "mem", cmd: "cmp", desc: "比较两段内存内容", ex: "cmp.b 80000000 80010000 10" },
+
+    /* 网络操作 */
+    { cat: "net", cmd: "ping", desc: "测试与 Ubuntu 是否连通", ex: "ping 192.168.1.100", hot: true },
+    { cat: "net", cmd: "dhcp", desc: "从路由器自动获取 IP 地址", ex: "dhcp" },
+    { cat: "net", cmd: "nfs", desc: "从 Ubuntu 的 NFS 服务器下载文件（调试常用）", ex: "nfs 80800000 192.168.1.100:/home/xxx/zImage", hot: true },
+    { cat: "net", cmd: "tftp", desc: "从 Ubuntu 的 TFTP 服务器下载文件", ex: "tftp 80800000 zImage", hot: true },
+
+    /* EMMC / SD */
+    { cat: "mmc", cmd: "mmc list", desc: "列出所有 MMC 设备", ex: "mmc list" },
+    { cat: "mmc", cmd: "mmc dev", desc: "切换设备：0 = SD 卡，1 = EMMC", ex: "mmc dev 1" },
+    { cat: "mmc", cmd: "mmc info", desc: "显示当前设备信息（容量等）", ex: "mmc info" },
+    { cat: "mmc", cmd: "mmc part", desc: "显示分区表", ex: "mmc part" },
+    { cat: "mmc", cmd: "mmc read", desc: "读数据到 DRAM（单位：块，1 块 = 512 字节）", ex: "mmc read 80800000 600 10" },
+    { cat: "mmc", cmd: "mmc write", desc: "把 DRAM 数据写入设备", ex: "mmc write 80800000 600 10" },
+    { cat: "mmc", cmd: "mmc erase", desc: "擦除 —— 千万不要用，会误擦数据！", ex: "mmc erase 0 10", warn: true },
+
+    /* 文件系统 */
+    { cat: "fs", cmd: "fatinfo", desc: "查看 FAT 分区信息", ex: "fatinfo mmc 1:1" },
+    { cat: "fs", cmd: "fatls", desc: "列出 FAT 分区目录", ex: "fatls mmc 1:1" },
+    { cat: "fs", cmd: "fstype", desc: "查看分区文件系统类型", ex: "fstype mmc 1:1" },
+    { cat: "fs", cmd: "fatload", desc: "FAT 文件 → DRAM", ex: "fatload mmc 1:1 80800000 zImage" },
+    { cat: "fs", cmd: "fatwrite", desc: "DRAM → FAT 文件", ex: "fatwrite mmc 1:1 80800000 zImage $filesize" },
+    { cat: "fs", cmd: "ext4ls", desc: "列出 EXT4 分区目录", ex: "ext4ls mmc 1:2" },
+    { cat: "fs", cmd: "ext4load", desc: "EXT4 文件 → DRAM", ex: "ext4load mmc 1:2 80800000 xxx" },
+
+    /* NAND */
+    { cat: "nand", cmd: "nand info", desc: "查看 NAND 信息", ex: "nand info" },
+    { cat: "nand", cmd: "nand erase", desc: "擦除 —— 写之前必须先擦", ex: "nand erase 0x200000 0x200000" },
+    { cat: "nand", cmd: "nand write", desc: "写数据到 NAND", ex: "nand write 80800000 0x200000 0x200000" },
+    { cat: "nand", cmd: "nand read", desc: "从 NAND 读数据", ex: "nand read 80800000 0x200000 0x200000" },
+
+    /* BOOT */
+    { cat: "boot", cmd: "bootz", desc: "启动 zImage（需先放到 DRAM）", ex: "bootz 80800000 - 83000000" },
+    { cat: "boot", cmd: "bootm", desc: "启动 uImage", ex: "bootm 80800000" },
+    { cat: "boot", cmd: "boot", desc: "执行 bootcmd，自动启动", ex: "boot", hot: true },
+
+    /* 其他 */
+    { cat: "misc", cmd: "reset", desc: "复位（重启）", ex: "reset" },
+    { cat: "misc", cmd: "go", desc: "跳转到指定地址执行", ex: "go 87800000" },
+    { cat: "misc", cmd: "run", desc: "执行环境变量里的命令序列", ex: "run bootcmd" },
+    { cat: "misc", cmd: "mtest", desc: "内存读写测试", ex: "mtest 80000000 800fffff" }
+  ];
+
+  var SNIPPETS = [
+    { cat: "net", title: "网络环境变量（网线插 ENET2，与电脑同一网段）", code:
+      "setenv ipaddr    192.168.1.50       # 板子 IP\n" +
+      "setenv ethaddr   b8:ae:1d:01:02:03  # MAC 地址，第一次必须设置！\n" +
+      "setenv gatewayip 192.168.1.1\n" +
+      "setenv netmask   255.255.255.0\n" +
+      "setenv serverip  192.168.1.100      # Ubuntu 的 IP\n" +
+      "saveenv"
+    },
+    { cat: "boot", title: "内核启动传参 bootargs", code:
+      "setenv bootargs 'console=ttymxc0,115200 root=/dev/mmcblk1p2 rootwait rw'"
+    },
+    { cat: "boot", title: "自动启动 bootcmd（从 EMMC 分区1 加载并启动）", code:
+      "setenv bootcmd 'fatload mmc 1:1 80800000 zImage; fatload mmc 1:1 83000000 imx6ull-alientek-emmc.dtb; bootz 80800000 - 83000000'\n" +
+      "saveenv"
+    }
+  ];
+
+  var NOTES = {
+    mem: "单位后缀：<code>.b</code> 1字节 · <code>.w</code> 2字节 · <code>.l</code> 4字节（默认 .l）",
+    fs: "SD/EMMC 通常分三个区：① U-Boot ② zImage + dtb（FAT）③ 根文件系统（EXT4）。<code>mmc 1:1</code> 表示设备 1 的分区 1",
+    boot: "启动 Linux 三要素：zImage + 设备树 dtb + 根文件系统。zImage 和 dtb 必须先放到 DRAM（如 80800000），再 bootz",
+    nand: "写之前必须先擦除对应区域"
+  };
+
+  /* ---------- 渲染 ---------- */
+  var q = document.getElementById("q");
+  var chipsEl = document.getElementById("chips");
+  var sectionsEl = document.getElementById("sections");
+  var countEl = document.getElementById("count");
+  var emptyEl = document.getElementById("empty");
+  var activeCat = "all";
+
+  function el(html) {
+    var t = document.createElement("template");
+    t.innerHTML = html.trim();
+    return t.content.firstElementChild;
+  }
+  function esc(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  /* 分类 chips */
+  var allChip = el('<button class="chip on" type="button">全部</button>');
+  allChip.dataset.cat = "all";
+  chipsEl.appendChild(allChip);
+  CATS.forEach(function (c) {
+    var b = el('<button class="chip" type="button"></button>');
+    b.textContent = c.name;
+    b.dataset.cat = c.id;
+    chipsEl.appendChild(b);
+  });
+  chipsEl.addEventListener("click", function (e) {
+    var b = e.target.closest(".chip");
+    if (!b) return;
+    activeCat = b.dataset.cat;
+    Array.prototype.forEach.call(chipsEl.children, function (c) {
+      c.classList.toggle("on", c === b);
+    });
+    apply();
+  });
+
+  /* 复制 */
+  function copyText(text, btn) {
+    var ok = function () {
+      var old = btn.textContent;
+      btn.textContent = "已复制";
+      setTimeout(function () { btn.textContent = old; }, 1100);
+    };
+    var fallback = function () {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); ok(); } catch (e) {}
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok, fallback);
+    } else { fallback(); }
+  }
+
+  /* 命令卡片 */
+  var cmdNodes = [];
+  CATS.forEach(function (c) {
+    var items = ITEMS.filter(function (i) { return i.cat === c.id; });
+    var snips = SNIPPETS.filter(function (s) { return s.cat === c.id; });
+    if (!items.length && !snips.length) return;
+
+    var sec = el('<section></section>');
+    sec.dataset.cat = c.id;
+    sec.appendChild(el('<h2></h2>')).textContent = c.name;
+    if (NOTES[c.id]) sec.appendChild(el('<div class="sec-note">' + NOTES[c.id] + "</div>"));
+
+    var grid = el('<div class="grid"></div>');
+    items.forEach(function (it) {
+      var card = el('<article class="cmd"></article>');
+      var top = el('<div class="cmd-top"></div>');
+      var name = el('<code class="cmd-name"></code>');
+      name.textContent = it.cmd;
+      top.appendChild(name);
+      if (it.hot) top.appendChild(el('<span class="star">重点</span>'));
+      if (it.warn) top.appendChild(el('<span class="star">慎用</span>'));
+      card.appendChild(top);
+      var d = el('<p class="cmd-desc"></p>');
+      d.textContent = it.desc;
+      card.appendChild(d);
+
+      var exBox = el('<div class="ex"></div>');
+      var exText = it.ex;
+      var lines = exText.split("\n");
+      exBox.innerHTML = lines.map(function (ln, i) {
+        return (i === 0 ? '<span class="pr">=&gt; </span>' : '<span class="pr">   </span>') + esc(ln);
+      }).join("\n");
+      var cp = el('<button class="copy" type="button">复制</button>');
+      cp.addEventListener("click", function () { copyText(exText, cp); });
+      exBox.appendChild(cp);
+      card.appendChild(exBox);
+
+      card._search = (it.cmd + " " + it.desc + " " + it.ex).toLowerCase();
+      card.dataset.cat = it.cat;
+      grid.appendChild(card);
+      cmdNodes.push(card);
+    });
+    sec.appendChild(grid);
+
+    snips.forEach(function (s) {
+      var box = el('<div class="snippet"></div>');
+      var h = el("<h3></h3>"); h.textContent = "▶ " + s.title;
+      box.appendChild(h);
+      var pre = el("<pre></pre>");
+      pre.innerHTML = s.code.split("\n").map(function (ln) {
+        var idx = ln.indexOf("#");
+        if (idx >= 0) {
+          return esc(ln.slice(0, idx)) + '<span class="c">' + esc(ln.slice(idx)) + "</span>";
+        }
+        return esc(ln);
+      }).join("\n");
+      var cp = el('<button class="copy" type="button">复制</button>');
+      cp.addEventListener("click", function () { copyText(s.code, cp); });
+      pre.appendChild(cp);
+      box.appendChild(pre);
+      box._search = (s.title + " " + s.code).toLowerCase();
+      box.dataset.cat = s.cat;
+      sec.appendChild(box);
+      cmdNodes.push(box);
+    });
+
+    sec._searchAll = "";
+    sectionsEl.appendChild(sec);
+  });
+
+  /* 过滤 */
+  function apply() {
+    var kw = q.value.trim().toLowerCase();
+    var shown = 0;
+    cmdNodes.forEach(function (n) {
+      var okCat = activeCat === "all" || n.dataset.cat === activeCat;
+      var okKw = !kw || n._search.indexOf(kw) >= 0;
+      var vis = okCat && okKw;
+      n.style.display = vis ? "" : "none";
+      if (vis) shown++;
+    });
+    Array.prototype.forEach.call(sectionsEl.children, function (sec) {
+      var any = Array.prototype.some.call(sec.querySelectorAll(".cmd, .snippet"), function (n) {
+        return n.style.display !== "none";
+      });
+      sec.style.display = any ? "" : "none";
+    });
+    countEl.textContent = "共 " + shown + " 条";
+    emptyEl.style.display = shown ? "none" : "block";
+  }
+  q.addEventListener("input", apply);
+
+  /* 快捷键：/ 聚焦搜索，Esc 清空 */
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "/" && document.activeElement !== q) {
+      e.preventDefault(); q.focus();
+    } else if (e.key === "Escape" && document.activeElement === q) {
+      q.value = ""; apply(); q.blur();
+    }
+  });
+
+  /* 主题切换 */
+  var btn = document.getElementById("themeToggle");
+  var saved = null;
+  try { saved = localStorage.getItem("uboot-theme"); } catch (e) {}
+  if (saved === "light" || saved === "dark") {
+    document.documentElement.setAttribute("data-theme", saved);
+  }
+  btn.addEventListener("click", function () {
+    var doc = document.documentElement;
+    var next = doc.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    doc.setAttribute("data-theme", next);
+    try { localStorage.setItem("uboot-theme", next); } catch (e) {}
+  });
+
+  apply();
+})();
+</script>
+</body>
+</html>
